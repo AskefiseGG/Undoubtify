@@ -1,9 +1,10 @@
+// A PROJECT MADE BY TARQUIRI AND MALDONADO, UNDOUBTIFY
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Random;
 import javax.imageio.ImageIO;
@@ -13,17 +14,21 @@ public class UndoubtifyApp extends JFrame {
     private JLabel outputText;
     private JPanel optionsPanel;
     private static final int MAX_OPTIONS = 8;
+    private static final String ACCOUNT_FILE_PATH = "C:\\Users\\ADMIN\\Desktop\\School\\ONLY FOR UNDOUBTIFY\\Undoubtify\\accounts.txt";
+    private static final String PAST_ACTIVITY_FILE_PATH = "C:\\Users\\ADMIN\\Desktop\\School\\ONLY FOR UNDOUBTIFY\\Undoubtify\\past_activities.txt";
+
+    private boolean unsavedChanges = false;
 
     public UndoubtifyApp() {
         setTitle("Undoubtify");
         setSize(750, 500);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         setLocationRelativeTo(null);
         getContentPane().setBackground(new Color(19, 51, 55));
         setLayout(new BorderLayout());
-        setResizable(false); // Locks the window size
+        setResizable(false);
 
-        // Loads the custom icon image (We got help online)
+        // Loads the custom icon image
         try {
             Image icon = ImageIO.read(new File("undoubtify.png"));
             setIconImage(icon);
@@ -45,7 +50,7 @@ public class UndoubtifyApp extends JFrame {
         centerPanel.setBackground(new Color(80, 178, 213));
 
         optionsPanel = new JPanel();
-        optionsPanel.setBackground(new Color(80, 178, 213)); // Match the background color
+        optionsPanel.setBackground(new Color(80, 178, 213));
         optionsPanel.setLayout(new GridLayout(0, 1, 5, 5));
         centerPanel.add(optionsPanel);
 
@@ -111,7 +116,7 @@ public class UndoubtifyApp extends JFrame {
         closeButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                dispose();
+                promptToSaveOnClose();
             }
         });
         bottomPanel.add(closeButton);
@@ -168,15 +173,267 @@ public class UndoubtifyApp extends JFrame {
             int index = random.nextInt(textChoices.size());
             JTextField choice = textChoices.get(index);
             outputText.setText(choice.getText());
+
+            // Save the last output to the past activities file
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(PAST_ACTIVITY_FILE_PATH))) {
+                writer.write("Session ended. Last Output was: " + choice.getText());
+                writer.newLine();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
-    public static void main(String[] args) {
+    private void promptToSaveOnClose() {
+        int option = JOptionPane.showConfirmDialog(this, "Do you want to save the session?", "Confirm Close", JOptionPane.YES_NO_OPTION);
+        if (option == JOptionPane.YES_OPTION) {
+            promptToSave();
+        }
+        dispose();
+    }
+
+    private void promptToSave() {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(PAST_ACTIVITY_FILE_PATH, true))) {
+            String lastOutput = outputText.getText();
+            writer.write("Session ended. Last Output was: " + lastOutput);
+            writer.newLine();
+            for (JTextField textField : textChoices) {
+                writer.write(textField.getText());
+                writer.newLine();
+            }
+            unsavedChanges = false;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void showAccountOptions() {
+        String[] options = {"Create Account", "Load Account", "View Account", "Edit Account", "Delete Account", "View Past Activities", "Clear Past Activities"};
+        int choice = JOptionPane.showOptionDialog(null, "Choose an option:", "Account Management",
+                JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, options, options[0]);
+
+        switch (choice) {
+            case 0:
+                if (createAccount()) {
+                    launchMainApplication();
+                } else {
+                    showAccountOptions();
+                }
+                break;
+            case 1:
+                if (loadAccount()) {
+                    launchMainApplication();
+                } else {
+                    showAccountOptions();
+                }
+                break;
+            case 2:
+                viewAccount();
+                showAccountOptions();
+                break;
+            case 3:
+                editAccount();
+                showAccountOptions();
+                break;
+            case 4:
+                deleteAccount();
+                showAccountOptions();
+                break;
+            case 5:
+                viewPastActivities();
+                showAccountOptions();
+                break;
+            case 6:
+                clearPastActivities();
+                showAccountOptions();
+                break;
+            default:
+                System.exit(0);
+        }
+    }
+
+    private static boolean createAccount() {
+        String name = JOptionPane.showInputDialog("Enter name:");
+        if (name == null || name.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(null, "Name cannot be empty.");
+            return false;
+        }
+
+        String id = JOptionPane.showInputDialog("Enter ID:");
+        if (id == null || id.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(null, "ID cannot be empty.");
+            return false;
+        }
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(ACCOUNT_FILE_PATH, true))) {
+            writer.write(name + " " + id);
+            writer.newLine();
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    private static boolean loadAccount() {
+        String id = JOptionPane.showInputDialog("Enter ID:");
+        if (id == null || id.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(null, "ID cannot be empty.");
+            return false;
+        }
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(ACCOUNT_FILE_PATH))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.endsWith(id)) {
+                    JOptionPane.showMessageDialog(null, "Welcome, " + line.split(" ")[0]);
+                    return true;
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        JOptionPane.showMessageDialog(null, "Account not found.");
+        return false;
+    }
+
+    private static void viewAccount() {
+        try (BufferedReader reader = new BufferedReader(new FileReader(ACCOUNT_FILE_PATH))) {
+            StringBuilder accounts = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                accounts.append(line).append("\n");
+            }
+            JTextArea textArea = new JTextArea(accounts.toString());
+            textArea.setEditable(false);
+            JOptionPane.showMessageDialog(null, new JScrollPane(textArea), "Accounts", JOptionPane.INFORMATION_MESSAGE);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void editAccount() {
+        String id = JOptionPane.showInputDialog("Enter ID of the account to edit:");
+        if (id == null || id.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(null, "ID cannot be empty.");
+            return;
+        }
+
+        File inputFile = new File(ACCOUNT_FILE_PATH);
+        File tempFile = new File("temp_accounts.txt");
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(inputFile));
+             BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile))) {
+            String line;
+            boolean found = false;
+            while ((line = reader.readLine()) != null) {
+                if (line.endsWith(id)) {
+                    String newName = JOptionPane.showInputDialog("Enter new name:");
+                    if (newName == null || newName.trim().isEmpty()) {
+                        JOptionPane.showMessageDialog(null, "Name cannot be empty.");
+                        return;
+                    }
+                    writer.write(newName + " " + id);
+                    writer.newLine();
+                    found = true;
+                } else {
+                    writer.write(line);
+                    writer.newLine();
+                }
+            }
+
+            if (found) {
+                reader.close();
+                writer.close();
+                inputFile.delete();
+                tempFile.renameTo(inputFile);
+                JOptionPane.showMessageDialog(null, "Account updated successfully.");
+            } else {
+                reader.close();
+                writer.close();
+                tempFile.delete();
+                JOptionPane.showMessageDialog(null, "Account not found.");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void deleteAccount() {
+        String id = JOptionPane.showInputDialog("Enter ID of the account to delete:");
+        if (id == null || id.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(null, "ID cannot be empty.");
+            return;
+        }
+
+        File inputFile = new File(ACCOUNT_FILE_PATH);
+        File tempFile = new File("temp_accounts.txt");
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(inputFile));
+             BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile))) {
+            String line;
+            boolean found = false;
+            while ((line = reader.readLine()) != null) {
+                if (!line.endsWith(id)) {
+                    writer.write(line);
+                    writer.newLine();
+                } else {
+                    found = true;
+                }
+            }
+
+            if (found) {
+                reader.close();
+                writer.close();
+                inputFile.delete();
+                tempFile.renameTo(inputFile);
+                JOptionPane.showMessageDialog(null, "Account deleted successfully.");
+            } else {
+                reader.close();
+                writer.close();
+                tempFile.delete();
+                JOptionPane.showMessageDialog(null, "Account not found.");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void viewPastActivities() {
+        try (BufferedReader reader = new BufferedReader(new FileReader(PAST_ACTIVITY_FILE_PATH))) {
+            StringBuilder activities = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                activities.append(line).append("\n");
+            }
+            JTextArea textArea = new JTextArea(activities.toString());
+            textArea.setEditable(false);
+            JOptionPane.showMessageDialog(null, new JScrollPane(textArea), "Past Activities", JOptionPane.INFORMATION_MESSAGE);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void clearPastActivities() {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(PAST_ACTIVITY_FILE_PATH))) {
+            writer.write("");
+            JOptionPane.showMessageDialog(null, "Past activities cleared successfully.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void launchMainApplication() {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
                 new UndoubtifyApp().setVisible(true);
             }
         });
+    }
+
+    public static void main(String[] args) {
+        showAccountOptions();
     }
 }
