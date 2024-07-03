@@ -77,7 +77,7 @@ public class UndoubtifyApp extends JFrame {
         });
         bottomPanel.add(startButton);
 
-        JButton addButton = new JButton("Add");
+        JButton addButton = new JButton("Add Box");
         addButton.setFont(new Font("Unispace", Font.PLAIN, 15));
         addButton.setBackground(new Color(131, 205, 229));
         addButton.addActionListener(new ActionListener() {
@@ -145,7 +145,7 @@ public class UndoubtifyApp extends JFrame {
         if (textChoices.size() < MAX_OPTIONS) {
             addOptionField();
         } else {
-            JOptionPane.showMessageDialog(this, "Cannot add more than 8 boxes.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "You cannot add more than 8 boxes!", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -156,7 +156,7 @@ public class UndoubtifyApp extends JFrame {
             optionsPanel.revalidate();
             optionsPanel.repaint();
         } else {
-            JOptionPane.showMessageDialog(this, "Cannot delete the last two boxes. At least two boxes must remain.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "You cannot have less than 2 boxes!", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
